@@ -2,7 +2,11 @@
 #include <Wire.h>
 #include <string.h>
 
+#define CHANGE_BUTTON 2
+#define ENTER_BUTTON 3
+
 LiquidCrystal_I2C lcd(0x27, 20, 4);
+bool refresh = true;
 
 // Main state
 enum states {
@@ -10,8 +14,7 @@ enum states {
     RACE,
     BOARD,
     ADD_PLAYER,
-    REMOVE_PLAYER_CHOOSE,
-    REMOVE_PLAYER_CONFIRM,
+    REMOVE_PLAYER,
 };
 enum states mainState = MAIN_MENU;
 
@@ -24,54 +27,83 @@ String menuOptions [4] = {
     "Remove player",
 };
 
+// Player variables
+char newPlayer [20] = "";
+int typingCursor = 0;
+const char letters [28] = " ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+int currentLetter = 0;
+
+String players [10] = {};
+
+// Button variables
+long unsigned buttonLastActivation = 0;
+const int buttonInactivityTime = 200;
+
+
 void setup()
 {
     Serial.begin(9600);
     lcd.init();
     lcd.backlight();
+
+    pinMode(CHANGE_BUTTON, INPUT);
+    pinMode(ENTER_BUTTON, INPUT);
+    pinMode(LED_BUILTIN, OUTPUT);
 }
 
-// the loop function runs over and over again forever
 void loop()
 {
     switch (mainState) {
         case MAIN_MENU:
             mainMenu();
             break;
+        case ADD_PLAYER:
+            addPlayer();
+            break;
         default:
             fottiti();
     }
 }
 
+
 void mainMenu()
 {
-    if (buttonChange()) {
+    bool exit = false;
+    if (readButton(CHANGE_BUTTON)) {
         menuCursor = (menuCursor + 1) % 4;
     }
 
-    if (buttonEnter()) {
+    if (readButton(ENTER_BUTTON)) {
+        Serial.println("Entering state " + mainState);
         switch (menuCursor) {
             case 0:
                 mainState = RACE;
                 break;
             case 1:
-                mainState = RACE;
+                mainState = BOARD;
                 break;
             case 2:
-                mainState = RACE;
+                mainState = ADD_PLAYER;
                 break;
             case 3:
-                mainState = RACE;
+                mainState = REMOVE_PLAYER;
                 break;
             default:
                 mainState = MAIN_MENU;
         }
+        exit = true;
     }
 
-    drawOptions();
-    drawCursor();
-
-    delay(2000);
+    if (refresh & !exit) {
+        lcd.clear();
+        for (int i=0; i<4 ; i++) {
+            lcd.setCursor(2, i);
+            lcd.print(menuOptions[i]);
+        }
+        lcd.setCursor(0, menuCursor);
+        lcd.print(">");
+        refresh = false;
+    }
 }
 
 void drawOptions() {
@@ -92,12 +124,12 @@ void drawCursor() {
     }
 }
 
-bool buttonChange() {
-    return true;
-}
-
-bool buttonEnter() {
-    if (millis() > 5000 && millis() < 6000) {
+bool readButton(int buttonPin) {
+    const long unsigned time = millis(); 
+    if (digitalRead(buttonPin) & time > buttonLastActivation + buttonInactivityTime) {
+        buttonLastActivation = time;
+        refresh = true;
+        Serial.println("Pressed button " + buttonPin);
         return true;
     }
     return false;
@@ -112,4 +144,45 @@ void fottiti() {
     delay(5000);
     mainState = MAIN_MENU;
     lcd.clear();
+    refresh = true;
+}
+
+void addPlayer() {
+    bool exit = false;
+    if (readButton(CHANGE_BUTTON)) {
+        currentLetter = (currentLetter + 1) % 27;
+    }
+
+    if (readButton(ENTER_BUTTON)) {
+        newPlayer[typingCursor] = letters[currentLetter];
+        currentLetter = 0;
+        typingCursor++;
+
+        if (typingCursor >= 20) {
+            players[0] = newPlayer;
+            lcd.clear();
+            lcd.setCursor(4, 1);
+            lcd.print("Player added");
+            delay(2000);
+            mainState = MAIN_MENU;
+            exit = true;
+            for (int i=0; i<20; i++) {
+                newPlayer[i] = ' ';
+            }
+        }
+    }
+
+    if (refresh && !exit) {
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("Enter player name:");
+        lcd.setCursor(0, 1);
+        lcd.print(newPlayer);
+        
+        lcd.setCursor(typingCursor, 1);
+        lcd.print(letters[currentLetter]);
+        lcd.setCursor(typingCursor, 2);
+        lcd.print("^");
+        refresh = false;
+    }
 }
