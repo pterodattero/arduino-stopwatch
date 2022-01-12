@@ -33,7 +33,7 @@ int typingCursor = 0;
 const char letters [28] = " ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 int currentLetter = 0;
 
-String players [10] = {};
+std::list<String> players;
 
 // Button variables
 long unsigned buttonLastActivation = 0;
@@ -149,6 +149,16 @@ void fottiti() {
 
 void addPlayer() {
     bool exit = false;
+    
+    if (players.size() >= 10) {
+        mainState = MAIN_MENU;
+        lcd.clear();
+        lcd.setCursor(4, 1);
+        lcd.print("Memory full!");
+        exit = true;
+        refresh = true;
+    }
+    
     if (readButton(CHANGE_BUTTON)) {
         currentLetter = (currentLetter + 1) % 27;
     }
@@ -159,7 +169,7 @@ void addPlayer() {
         typingCursor++;
 
         if (typingCursor >= 20) {
-            players[0] = newPlayer;
+            players.push_back(newPlayer);
             lcd.clear();
             lcd.setCursor(4, 1);
             lcd.print("Player added");
