@@ -1,6 +1,7 @@
 #include <LiquidCrystal_I2C.h>
 #include <Wire.h>
 #include <LinkedList.h>
+#include <EEPROM.h>
 
 #define CHANGE_BUTTON 2
 #define ENTER_BUTTON 3
@@ -44,6 +45,7 @@ int currentLetter = 0;
 int currentPlayer = 0;
 
 LinkedList<String> players;
+LinkedList<uint16_t*> boards;
 
 // Race variables
 const String boardLabels [4] = {
@@ -52,7 +54,7 @@ const String boardLabels [4] = {
     "PT3",
     "END",
 };
-int unsigned currentBoard [4] = {};
+uint16_t currentBoard [4] = {};
 int unsigned currentPart = 0;
 long unsigned startTime;
 long unsigned raceLastRefreshTime = 0;
@@ -74,14 +76,10 @@ void setup() {
     pinMode(CHANGE_BUTTON, INPUT);
     pinMode(ENTER_BUTTON, INPUT);
     pinMode(LASER, OUTPUT);
-    //pinMode(DILDO, INPUT);
     pinMode(LED_BUILTIN, OUTPUT);
 
-    players.add("CAZZO MOLLE");
-    players.add("CAZZO DURO");
-    players.add("CAZZO MARMOREO");
-
-    digitalWrite(LASER, HIGH);
+    loadPlayers();
+    loadBoards();
 }
 
 void loop() {
@@ -390,4 +388,76 @@ bool readLaser() {
         digitalWrite(LASER, HIGH);
     }
     return false;
+}
+
+// Memory methods
+String readPlayerName(int player) {
+    if (player < 0 || player >= 10) {
+        return "";
+    }
+
+    String name;
+    for (int i=0; i<20; i++) {        
+        const int offset = player * 28;
+        name += (char)EEPROM.read(offset + i);
+    }
+
+    return name;
+}
+
+uint16_t* readPlayerBoard(int player) {
+    static uint16_t emptyBoard [4];
+    if (player < 0 || player >= 10) {
+        return emptyBoard;
+    }
+
+    static uint16_t board [4];
+    for (int part=0; part<4; part++) {
+        const int offset = player * 28 + 20;
+        uint8_t firstOctet = (uint8_t)EEPROM.read(offset + 2 * part);
+        uint8_t secondOctet = (uint8_t)EEPROM.read(offset + 2 * part + 1);
+        board[part] = firstOctet * 256 + secondOctet;
+    }
+
+    return board;
+}
+
+void writePlayerName(int player) {
+    if (player >= 0 & player < 10) {
+        String name = players.get(player);
+
+        const int offset = player * 28;
+        for (int i=0; i<20 & i<name.length(); i++) {
+            EEPROM.put(offset + i, (uint8_t)name[i]);
+        }
+    }
+}
+
+void writePlayerBoard(int player, uint16_t* board) {
+    if (player >= 0 & player < 10) {
+        String name = players.get(player);
+
+        for (int part=0; part<4; part++) {
+            const int offset = player * 28 + 20;
+            uint8_t firstOctet = board[part] / 256;
+            uint8_t secondOctet = board[part] % 256;
+            EEPROM.put(offset + 2 * part, firstOctet);
+            EEPROM.put(offset + 2 * part + 1, secondOctet);
+        }
+    }
+}
+
+void loadPlayers() {
+    for (int i=0; i<10; i++) {
+        String name = readPlayerName(i);
+        if (name == "                    ") break;
+        players.add(i, name);
+    }
+}
+
+void loadBoards() {
+    for (int i=0; i<players.size(); i++) {
+        uint16_t* board = readPlayerBoard(i);
+        boards.add(i, board);
+    }
 }
