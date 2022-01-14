@@ -5,6 +5,7 @@
 #define CHANGE_BUTTON 2
 #define ENTER_BUTTON 3
 #define LASER 14
+#define DILDO A3
 
 LiquidCrystal_I2C lcd(0x27, 20, 4);
 bool refresh = true;
@@ -62,6 +63,7 @@ long unsigned buttonLastActivation = 0;
 const int buttonInactivityTime = 200;
 long unsigned laserLastActivation = 0;
 const int laserInactivityTime = 1000;
+const int dildoThresh = 800;
 
 
 void setup() {
@@ -72,11 +74,14 @@ void setup() {
     pinMode(CHANGE_BUTTON, INPUT);
     pinMode(ENTER_BUTTON, INPUT);
     pinMode(LASER, OUTPUT);
+    //pinMode(DILDO, INPUT);
     pinMode(LED_BUILTIN, OUTPUT);
 
     players.add("CAZZO MOLLE");
     players.add("CAZZO DURO");
     players.add("CAZZO MARMOREO");
+
+    digitalWrite(LASER, HIGH);
 }
 
 void loop() {
@@ -243,8 +248,7 @@ void race() {
                 refresh = false;
             }
             
-            //if (readLaser()) {
-            if (readButton(CHANGE_BUTTON)) {
+            if (readLaser()) {
                 raceState = RECORD_RACE;
                 startTime = millis();
             }
@@ -256,14 +260,13 @@ void race() {
             break;
         case RECORD_RACE:
             time = millis(); 
-            if (time > raceLastRefreshTime + 100) {
+            if (time > raceLastRefreshTime + 250) {
                 currentBoard[currentPart] = time - startTime;
                 showBoard();
                 raceLastRefreshTime = time;
             }
             
-            //if (readLaser()) {
-            if (readButton(CHANGE_BUTTON)) {
+            if (readLaser()) {
                 currentBoard[currentPart] = time - startTime;
                 currentPart++;
                 if (currentPart >= 4) {
@@ -339,28 +342,6 @@ void showBoard() {
     }
 }
 
-/*void showBoard(bool lazy=false) {
-    if (!lazy) lcd.clear();
-    for (int i=0; i<4; i++) {
-        if (!lazy) {
-            lcd.setCursor(0, i);
-            lcd.print(boardLabels[i]);
-        }
-        if (i <= currentPart | (lazy & i==currentPart)) {
-            String ss = String(currentBoard[i] / 1000);
-            String ms = String(currentBoard[i] % 1000);
-            while (ss.length() < 2) {
-                ss = '0' + ss;
-            }
-            while (ms.length() < 2) {
-                ms = '0' + ms;
-            }
-            lcd.setCursor(4, i);
-            lcd.print(ss + ':' + ms);
-        }
-    }
-}*/
-
 bool selectPlayer() {
     if (refresh) {
         lcd.clear();
@@ -395,12 +376,18 @@ bool readButton(int buttonPin) {
 
 bool readLaser() {
     const long unsigned time = millis(); 
-    if (digitalRead(LASER) & time > laserLastActivation + laserInactivityTime) {
-        buttonLastActivation = time;
+    if (analogRead(DILDO) < dildoThresh & time > laserLastActivation + laserInactivityTime) {
+        laserLastActivation = time;
         refresh = true;
+
+        // Safety switch
+        digitalWrite(LASER, LOW);
         Serial.println("Laserrrrrrrrrrrrrrrrr");
         return true;
     }
-    // SAFETY SWITCH TO IMPLEMENT
+
+    if (time > laserLastActivation + laserInactivityTime - 30) {
+        digitalWrite(LASER, HIGH);
+    }
     return false;
 }
