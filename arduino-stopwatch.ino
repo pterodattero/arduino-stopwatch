@@ -78,8 +78,7 @@ void setup() {
     pinMode(LASER, OUTPUT);
     pinMode(LED_BUILTIN, OUTPUT);
 
-    loadPlayers();
-    loadBoards();
+    loadData();
 }
 
 void loop() {
@@ -173,6 +172,10 @@ void addPlayer() {
         if (typingCursor >= 20) {
             typingCursor = 0;
             players.add(newPlayer);
+            int emptyBoard [4] = {}
+            boards.add(emptyBoard);
+            writeData();
+
             lcd.clear();
             lcd.setCursor(4, 1);
             lcd.print("Player added");
@@ -214,6 +217,8 @@ void removePlayer() {
 
             if (readButton(ENTER_BUTTON)) {
                 players.remove(currentPlayer);
+                boards.remove(currentPlayer);
+                writeData();
                 
                 mainState = MAIN_MENU;
                 removeState = SELECT_PLAYER;
@@ -279,11 +284,15 @@ void race() {
             }
             break;
         case FINISH_RACE:
+            // This will be executed only once thanks to the strict inequality
+            if (currentBoard[3] < boards[currentPlayer]) {
+                boards[currentPlayer] = currentBoard;
+                writePlayerBoard(currentPlayer, currentBoard);
+            }
             digitalWrite(LASER, LOW);
             if (refresh) {
                 showBoard();
                 refresh = false;
-                Serial.println("Porco dio");
             }
             if (readButton(CHANGE_BUTTON)) {
                 raceState = READY_RACE;
@@ -291,7 +300,6 @@ void race() {
                 for (int i=0; i<4; i++) {
                     currentBoard[i] = 0;
                 }
-                refresh = true;
             }
             if (readButton(ENTER_BUTTON)) {
                 mainState = MAIN_MENU;
@@ -300,7 +308,6 @@ void race() {
                 for (int i=0; i<4; i++) {
                     currentBoard[i] = 0;
                 }
-                refresh = true;
             }
             break;
         default:
@@ -447,17 +454,20 @@ void writePlayerBoard(int player, uint16_t* board) {
     }
 }
 
-void loadPlayers() {
+void loadData() {
     for (int i=0; i<10; i++) {
         String name = readPlayerName(i);
         if (name == "                    ") break;
         players.add(i, name);
+
+        uint16_t* board = readPlayerBoard(i);
+        boards.add(i, board);
     }
 }
 
-void loadBoards() {
+void writeData() {
     for (int i=0; i<players.size(); i++) {
-        uint16_t* board = readPlayerBoard(i);
-        boards.add(i, board);
+        writePlayerName(i);
+        writePlayerBoard(i);
     }
 }
