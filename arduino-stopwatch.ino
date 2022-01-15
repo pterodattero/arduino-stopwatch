@@ -23,10 +23,12 @@ enum states {
     READY_RACE,
     RECORD_RACE,
     FINISH_RACE,
+    SHOW_BOARD,
 };
 enum states mainState = MAIN_MENU;
 enum states removeState = SELECT_PLAYER;
 enum states raceState = SELECT_PLAYER;
+enum states boardState = SELECT_PLAYER;
 
 // Main menu variables
 int menuCursor = 0;
@@ -86,6 +88,9 @@ void loop() {
         case MAIN_MENU:
             mainMenu();
             break;
+        case BOARD:
+            board();
+            break;
         case ADD_PLAYER:
             addPlayer();
             break;
@@ -137,6 +142,7 @@ void mainMenu() {
     }
 }
 
+
 void addPlayer() {
     if (refresh) {
         lcd.clear();
@@ -157,6 +163,7 @@ void addPlayer() {
         lcd.clear();
         lcd.setCursor(4, 1);
         lcd.print("Memory full!");
+        delay(1000);
         refresh = true;
     }
     
@@ -172,7 +179,7 @@ void addPlayer() {
         if (typingCursor >= 20) {
             typingCursor = 0;
             players.add(newPlayer);
-            int emptyBoard [4] = {}
+            uint16_t emptyBoard [4] = {};
             boards.add(emptyBoard);
             writeData();
 
@@ -247,7 +254,7 @@ void race() {
         case READY_RACE:
             if (refresh) {
                 digitalWrite(LASER, HIGH);
-                showBoard();
+                showBoard(currentBoard);
                 refresh = false;
             }
             
@@ -265,7 +272,7 @@ void race() {
             time = millis(); 
             if (time > raceLastRefreshTime + 250) {
                 currentBoard[currentPart] = time - startTime;
-                showBoard();
+                showBoard(currentBoard);
                 raceLastRefreshTime = time;
             }
             
@@ -285,13 +292,13 @@ void race() {
             break;
         case FINISH_RACE:
             // This will be executed only once thanks to the strict inequality
-            if (currentBoard[3] < boards[currentPlayer]) {
+            if (currentBoard[3] < boards[currentPlayer][3]) {
                 boards[currentPlayer] = currentBoard;
                 writePlayerBoard(currentPlayer, currentBoard);
             }
             digitalWrite(LASER, LOW);
             if (refresh) {
-                showBoard();
+                showBoard(currentBoard);
                 refresh = false;
             }
             if (readButton(CHANGE_BUTTON)) {
@@ -315,6 +322,34 @@ void race() {
     }
 }
 
+void board() {
+    switch (boardState) {
+        case SELECT_PLAYER:
+            if (selectPlayer()) {
+                boardState = READY_RACE;
+            };
+            break;
+        case SHOW_BOARD:
+            if (refresh) {
+                uint16_t* board = boards[currentPlayer];
+                showBoard(board);
+                refresh = false;
+            }
+            if (readButton(CHANGE_BUTTON)) {
+                boardState = READY_RACE;
+                refresh = true;
+            }
+            if (readButton(ENTER_BUTTON)) {
+                mainState = MAIN_MENU;
+                boardState = SELECT_PLAYER;
+                refresh = true;
+            }
+            break;
+        default:
+            fottiti();
+    }
+}
+
 void fottiti() {
     lcd.clear();
     lcd.setCursor(6, 1);
@@ -329,13 +364,13 @@ void fottiti() {
 
 
 // UTILS
-void showBoard() {
+void showBoard(uint16_t* board) {
     lcd.clear();
     for (int i=0; i<4; i++) {
         lcd.setCursor(0, i);
         lcd.print(boardLabels[i]);
-        String ss = String(currentBoard[i] / 1000);
-        String ms = String(currentBoard[i] % 1000);
+        String ss = String(board[i] / 1000);
+        String ms = String(board[i] % 1000);
         while (ss.length() < 2) {
             ss = '0' + ss;
         }
@@ -468,6 +503,6 @@ void loadData() {
 void writeData() {
     for (int i=0; i<players.size(); i++) {
         writePlayerName(i);
-        writePlayerBoard(i);
+        writePlayerBoard(i, boards[i]);
     }
 }
