@@ -67,7 +67,7 @@ long unsigned buttonLastActivation = 0;
 const int buttonInactivityTime = 200;
 long unsigned laserLastActivation = 0;
 const int laserInactivityTime = 1000;
-const int dildoThresh = 800;
+int dildoThresh;
 
 
 void setup() {
@@ -75,12 +75,16 @@ void setup() {
     lcd.init();
     lcd.backlight();
 
+    splashScreen();
+
     pinMode(CHANGE_BUTTON, INPUT);
     pinMode(ENTER_BUTTON, INPUT);
     pinMode(LASER, OUTPUT);
     pinMode(LED_BUILTIN, OUTPUT);
 
     loadData();
+
+    calibrateLaser();
 }
 
 void loop() {
@@ -505,4 +509,31 @@ void writeData() {
         writePlayerName(i);
         writePlayerBoard(i, boards[i]);
     }
+}
+
+
+// Bonus
+
+void splashScreen() {
+    lcd.setCursor(0, 0);
+    lcd.print(" <================3 ");
+    lcd.setCursor(0, 1);
+    lcd.print("    Gentilmente,    ");
+    lcd.setCursor(0, 2);
+    lcd.print("  levati dal cazzo  ");
+    lcd.setCursor(0, 3);
+    lcd.print(" E================> ");
+}
+
+void calibrateLaser() {
+    delay(1000);
+    digitalWrite(LASER, HIGH);
+    delay(100);
+    int lowLight = analogRead(DILDO);
+    digitalWrite(LASER, LOW);
+    delay(100);
+    int highLight = analogRead(DILDO);
+    
+    dildoThresh = (highLight + lowLight) / 2;
+    refresh = true;
 }
