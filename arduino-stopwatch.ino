@@ -330,7 +330,7 @@ void board() {
     switch (boardState) {
         case SELECT_PLAYER:
             if (selectPlayer()) {
-                boardState = READY_RACE;
+                boardState = SHOW_BOARD;
             };
             break;
         case SHOW_BOARD:
@@ -340,7 +340,7 @@ void board() {
                 refresh = false;
             }
             if (readButton(CHANGE_BUTTON)) {
-                boardState = READY_RACE;
+                boardState = SELECT_PLAYER;
                 refresh = true;
             }
             if (readButton(ENTER_BUTTON)) {
