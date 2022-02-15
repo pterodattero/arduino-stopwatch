@@ -1,12 +1,10 @@
-#include <LiquidCrystal_I2C.h>
-#include <Wire.h>
-#include <LinkedList.h>
-#include <EEPROM.h>
+#include "LiquidCrystal_I2C.h"
+#include "Wire.h"
+#include "LinkedList.h"
+#include "EEPROM.h"
 
-#define CHANGE_BUTTON 2
-#define ENTER_BUTTON 3
-#define LASER 14
-#define DILDO A3
+#include "Utils.h"
+#include "Constants.h"
 
 LiquidCrystal_I2C lcd(0x27, 20, 4);
 bool refresh = true;
@@ -84,7 +82,7 @@ void setup() {
 
     loadData();
 
-    calibrateLaser();
+    Utils::calibrateLaser();
 }
 
 void loop() {
@@ -121,11 +119,11 @@ void mainMenu() {
         lcd.print(">");
         refresh = false;
     }
-    if (readButton(CHANGE_BUTTON)) {
+    if (Utils::readButton(CHANGE_BUTTON)) {
         menuCursor = (menuCursor + 1) % 4;
     }
 
-    if (readButton(ENTER_BUTTON)) {
+    if (Utils::readButton(ENTER_BUTTON)) {
         Serial.println("Entering state " + String(mainState));
         switch (menuCursor) {
             case 0:
@@ -171,11 +169,11 @@ void addPlayer() {
         refresh = true;
     }
     
-    if (readButton(CHANGE_BUTTON)) {
+    if (Utils::readButton(CHANGE_BUTTON)) {
         currentLetter = (currentLetter + 1) % 27;
     }
 
-    if (readButton(ENTER_BUTTON)) {
+    if (Utils::readButton(ENTER_BUTTON)) {
         newPlayer[typingCursor] = letters[currentLetter];
         currentLetter = 0;
         typingCursor++;
@@ -214,7 +212,7 @@ void removePlayer() {
                 refresh = false;
             }
             
-            if (readButton(CHANGE_BUTTON)) {
+            if (Utils::readButton(CHANGE_BUTTON)) {
                 mainState = MAIN_MENU;
                 removeState = SELECT_PLAYER;
                 currentPlayer = 0;
@@ -226,7 +224,7 @@ void removePlayer() {
                 delay(1000);
             }
 
-            if (readButton(ENTER_BUTTON)) {
+            if (Utils::readButton(ENTER_BUTTON)) {
                 players.remove(currentPlayer);
                 boards.remove(currentPlayer);
                 writeData();
@@ -262,11 +260,11 @@ void race() {
                 refresh = false;
             }
             
-            if (readLaser()) {
+            if (Utils::readLaser()) {
                 raceState = RECORD_RACE;
                 startTime = millis();
             }
-            if (readButton(ENTER_BUTTON)) {
+            if (Utils::readButton(ENTER_BUTTON)) {
                 mainState = MAIN_MENU;
                 raceState = SELECT_PLAYER;
                 refresh = true;
@@ -280,7 +278,7 @@ void race() {
                 raceLastRefreshTime = time;
             }
             
-            if (readLaser()) {
+            if (Utils::readLaser()) {
                 currentBoard[currentPart] = time - startTime;
                 currentPart++;
                 if (currentPart >= 4) {
@@ -288,7 +286,7 @@ void race() {
                     refresh = true;
                 }
             }
-            if (readButton(ENTER_BUTTON)) {
+            if (Utils::readButton(ENTER_BUTTON)) {
                 mainState = MAIN_MENU;
                 raceState = SELECT_PLAYER;
                 refresh = true;
@@ -305,14 +303,14 @@ void race() {
                 showBoard(currentBoard);
                 refresh = false;
             }
-            if (readButton(CHANGE_BUTTON)) {
+            if (Utils::readButton(CHANGE_BUTTON)) {
                 raceState = READY_RACE;
                 currentPart = 0;
                 for (int i=0; i<4; i++) {
                     currentBoard[i] = 0;
                 }
             }
-            if (readButton(ENTER_BUTTON)) {
+            if (Utils::readButton(ENTER_BUTTON)) {
                 mainState = MAIN_MENU;
                 raceState = SELECT_PLAYER;
                 currentPart = 0;
@@ -339,11 +337,11 @@ void board() {
                 showBoard(board);
                 refresh = false;
             }
-            if (readButton(CHANGE_BUTTON)) {
+            if (Utils::readButton(CHANGE_BUTTON)) {
                 boardState = SELECT_PLAYER;
                 refresh = true;
             }
-            if (readButton(ENTER_BUTTON)) {
+            if (Utils::readButton(ENTER_BUTTON)) {
                 mainState = MAIN_MENU;
                 boardState = SELECT_PLAYER;
                 refresh = true;
@@ -396,45 +394,17 @@ bool selectPlayer() {
         refresh = false;
     }
     
-    if (readButton(CHANGE_BUTTON)) {
+    if (Utils::readButton(CHANGE_BUTTON)) {
         currentPlayer = (currentPlayer + 1) % players.size();
     }
 
-    if (readButton(ENTER_BUTTON)) {
+    if (Utils::readButton(ENTER_BUTTON)) {
         return true;
     }
 
     return false;
 }
 
-bool readButton(int buttonPin) {
-    const long unsigned time = millis(); 
-    if (digitalRead(buttonPin) & time > buttonLastActivation + buttonInactivityTime) {
-        buttonLastActivation = time;
-        refresh = true;
-        Serial.println("Pressed button " + String(buttonPin));
-        return true;
-    }
-    return false;
-}
-
-bool readLaser() {
-    const long unsigned time = millis(); 
-    if (analogRead(DILDO) < dildoThresh & time > laserLastActivation + laserInactivityTime) {
-        laserLastActivation = time;
-        refresh = true;
-
-        // Safety switch
-        digitalWrite(LASER, LOW);
-        Serial.println("Laserrrrrrrrrrrrrrrrr");
-        return true;
-    }
-
-    if (time > laserLastActivation + laserInactivityTime - 30) {
-        digitalWrite(LASER, HIGH);
-    }
-    return false;
-}
 
 // Memory methods
 String readPlayerName(int player) {
@@ -525,15 +495,3 @@ void splashScreen() {
     lcd.print(" E================> ");
 }
 
-void calibrateLaser() {
-    delay(1000);
-    digitalWrite(LASER, HIGH);
-    delay(100);
-    int lowLight = analogRead(DILDO);
-    digitalWrite(LASER, LOW);
-    delay(100);
-    int highLight = analogRead(DILDO);
-    
-    dildoThresh = (highLight + lowLight) / 2;
-    refresh = true;
-}
