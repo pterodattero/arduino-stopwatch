@@ -3,4 +3,4 @@
 #include "Arduino.h"
 #include "View.h"
 
-class MainMenu : public View { };
+class Race : public View { };

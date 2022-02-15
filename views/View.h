@@ -5,7 +5,10 @@
 
 class View {
     public:
-        void update();
+        View(LiquidCrystal_I2C* lcd=nullptr, int refreshInterval = 0);
+        View* update();
+
+        int player;
     protected:
         virtual void onChange();
         virtual void onEnter();
@@ -16,4 +19,6 @@ class View {
         
         static bool refresh;
         static LiquidCrystal_I2C* lcd;
+        View* nextView;
+        View* parent;
 };
