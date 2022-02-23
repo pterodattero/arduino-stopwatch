@@ -1,15 +1,53 @@
+#include "Arduino.h"
 #include "eeprom.h"
 #include "LinkedList.h"
 
+#include "Constants.h"
+
 class Model {
     public:
-        Model() {
-            loadData();
+            
+        static uint16_t* getBoard(int player) {
+            return boards[player];
         }
+
+        static void setBoard(int player, uint16_t* board) {
+            for (int i=0; i<BOARD_SIZE; i++) {
+                boards[player][i] = board[i];
+                writePlayerBoard(player, board);
+            }
+        }
+
+        static int addPlayer(String name) {
+            uint16_t emptyBoard[BOARD_SIZE] = {};
+            players.add(name);
+            boards.add(emptyBoard);
+            writeData();
+            return players.size() - 1;
+        }
+
+        static void removePlayer(int player) {
+            players.remove(player);
+            boards.remove(player);
+            writeData();
+        }
+
+        static void loadData() {
+            for (int i=0; i<10; i++) {
+                String name = readPlayerName(i);
+                if (name == "                    ") break;
+                players.add(i, name);
+
+                uint16_t* board = readPlayerBoard(i);
+                boards.add(i, board);
+            }
+        }
+
+    private:
         static LinkedList<String> players;
         static LinkedList<uint16_t*> boards;
-    private:
-        String readPlayerName(int player) {
+
+        static String readPlayerName(int player) {
             if (player < 0 || player >= 10) {
                 return "";
             }
@@ -23,7 +61,7 @@ class Model {
             return name;
         }
 
-        uint16_t* readPlayerBoard(int player) {
+        static uint16_t* readPlayerBoard(int player) {
             static uint16_t emptyBoard [4];
             if (player < 0 || player >= 10) {
                 return emptyBoard;
@@ -40,7 +78,7 @@ class Model {
             return board;
         }
 
-        void writePlayerName(int player) {
+        static void writePlayerName(int player) {
             if (player >= 0 & player < 10) {
                 String name = players.get(player);
 
@@ -51,7 +89,7 @@ class Model {
             }
         }
 
-        void writePlayerBoard(int player, uint16_t* board) {
+        static void writePlayerBoard(int player, uint16_t* board) {
             if (player >= 0 & player < 10) {
                 String name = players.get(player);
 
@@ -65,18 +103,13 @@ class Model {
             }
         }
 
-        void loadData() {
-            for (int i=0; i<10; i++) {
-                String name = readPlayerName(i);
-                if (name == "                    ") break;
-                players.add(i, name);
-
-                uint16_t* board = readPlayerBoard(i);
-                boards.add(i, board);
+        static void resetMemory() {
+            for (int i=0; i<EEPROM.length(); i++) {
+                EEPROM.write(i, 0);
             }
         }
 
-        void writeData() {
+        static void writeData() {
             for (int i=0; i<players.size(); i++) {
                 writePlayerName(i);
                 writePlayerBoard(i, boards[i]);

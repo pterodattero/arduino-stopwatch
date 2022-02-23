@@ -4,6 +4,7 @@
 #include "LiquidCrystal_I2C.h"
 #include "View.h"
 #include "Race.h"
+#include "Board.h"
 
 class MainMenu : public View {
     public:
@@ -38,11 +39,11 @@ class MainMenu : public View {
             Serial.println("Entering state " + String(status));
             switch (status) {
                 case 0:
-                    View view = Race();
-                    nextView = &view;
+                    delete nextView;
+                    nextView = new Race();
                 case 1:
-                    View view = Race();
-                    nextView = &view;
+                    delete nextView;
+                    nextView = new Board();
             }
         }
 };

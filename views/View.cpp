@@ -4,15 +4,12 @@
 
 class View {
     public:
-        View(LiquidCrystal_I2C* lcd, int refreshInterval = 0) {
+        View(int refreshInterval = 0) {
             refresh = true;
             lastRefreshTime = 0;
             this->refreshInterval = refreshInterval;
 
-            this->lcd = lcd;
             nextView = this;
-
-            digitalWrite(LASER, LOW);
         }
 
         View* update () {
@@ -32,18 +29,34 @@ class View {
                 onEnter();
                 refresh = true;
             }
-            if (Utils::readLaser()) {
+            if (Utils::readLaser(laser)) {
                 onLaser();
                 refresh = true;
             }
             if (nextView != this) return nextView;
             return this;
         }
+
+        static void setLcd(LiquidCrystal_I2C* const& lcd) {
+            View::lcd = lcd;
+            lcd->init();
+            lcd->backlight();
+        }
+
+        static void splashScreen() {
+            showMessage({
+                "<================8",
+                "Gentilmente,",
+                "levati dal cazzo",
+                "8================>"
+            });
+        }
         
     protected:
         unsigned int refreshInterval = 0;
         static bool refresh;
         unsigned long lastRefreshTime;
+        bool laser;
 
         static LiquidCrystal_I2C* lcd;
 
@@ -55,17 +68,13 @@ class View {
         virtual void onLaser() {};
 
         void fottiti() {
-            lcd->clear();
-            lcd->setCursor(6, 1);
-            lcd->print("Fottiti!");
-            lcd->setCursor(2, 2);
-            lcd->print("Pelato di merda!");
-            delay(1000);
-            lcd->clear();
-            refresh = true;
+            showMessage({
+                "Fottiti!",
+                "Pelato di merda!"
+            });
         }
 
-        void showBoard(uint16_t* board) {
+        void showBoard(uint16_t* board, int part=BOARD_SIZE-1) {
             const String boardLabels [4] = {
                 "PT1",
                 "PT2",
@@ -87,5 +96,16 @@ class View {
                 lcd->setCursor(4, i);
                 lcd->print(ss + ':' + ms);
             }
+        }
+
+        static void showMessage(String lines[], int timer=1000) {
+            int nLines = *(&lines + 1) - lines;
+            int startY = (4 - nLines) / 2;
+            for (int i=0; i<nLines; i++) {
+                int startX = (20 - lines[i].length()) / 2;
+                lcd->setCursor(startX, startY);
+                lcd->print(lines[i]);
+            }
+            delay(timer);
         }
 };

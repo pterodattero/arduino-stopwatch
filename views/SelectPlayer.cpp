@@ -6,8 +6,8 @@
 
 class SelectPlayer : public View {
     public:
-        SelectPlayer(View &parent) : View() {
-            this->parent = &parent;
+        SelectPlayer(View* parent) : View() {
+            this->parent = parent;
             selectedPlayer = 0;
         }
     private:
@@ -18,11 +18,11 @@ class SelectPlayer : public View {
             lcd->setCursor(0, 0);
             lcd->print("Select player:");
             lcd->setCursor(0, 1);
-            lcd->print(Model::players.get(selectedPlayer));
+            lcd->print(Model::getPlayerName(selectedPlayer));
         }
 
         void onChange() {
-            selectedPlayer = (selectedPlayer + 1) % Model::players.size();
+            selectedPlayer = (selectedPlayer + 1) % Model::getPlayersSize();
         }
 
         void onEnter() {

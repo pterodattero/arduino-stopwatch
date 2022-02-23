@@ -1,9 +1,14 @@
 #pragma once
 
-#include "LinkedList.h"
-
 class Model {
     public:
-        static LinkedList<String> players;
-        static LinkedList<uint16_t*> boards;
+        static void loadData();
+
+        static uint16_t* getBoard(int player);
+        static void setBoard(int player, uint16_t* board);
+
+        static String getPlayerName(int player);
+        static int getPlayersSize();
+        static int addPlayer(String name);
+        static void removePlayer(int player);
 };

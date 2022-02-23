@@ -4,5 +4,6 @@
 #include "View.h"
 
 class SelectPlayer : public View {
-    SelectPlayer(View &parent);
+    public:
+        SelectPlayer(View* parent);
 };

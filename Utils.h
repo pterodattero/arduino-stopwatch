@@ -3,8 +3,9 @@
 class Utils {
     public:
         static bool readButton(const int buttonPin);
-        static bool readLaser();
+        static bool readLaser(bool active);
         static void calibrateLaser();
+        static void initIO();
 
     private:
         static unsigned long buttonLastActivation;

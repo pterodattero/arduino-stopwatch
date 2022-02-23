@@ -13,8 +13,18 @@ class Utils {
             return false;
         }
 
-        static bool readLaser() {
+        static bool readLaser(bool active=true) {
+            if (!active) {
+                digitalWrite(LASER, LOW);
+                return false;
+            }
             const long unsigned time = millis(); 
+            if (time > laserLastActivation + laserInactivityTime - laserUnsafeOverlap) {
+                digitalWrite(LASER, HIGH);
+            } else {
+                digitalWrite(LASER, LOW);
+            }
+
             if (analogRead(DILDO) < dildoThresh & time > laserLastActivation + laserInactivityTime) {
                 laserLastActivation = time;
 
@@ -23,9 +33,6 @@ class Utils {
                 return true;
             }
 
-            if (time > laserLastActivation + laserInactivityTime - laserUnsafeOverlap) {
-                digitalWrite(LASER, HIGH);
-            }
             return false;
         }
 
@@ -39,6 +46,13 @@ class Utils {
             int highLight = analogRead(DILDO);
             
             dildoThresh = (highLight + lowLight) / 2;
+        }
+
+        static void initIO() {
+            pinMode(CHANGE_BUTTON, INPUT);
+            pinMode(ENTER_BUTTON, INPUT);
+            pinMode(LASER, OUTPUT);
+            pinMode(LED_BUILTIN, OUTPUT);
         }
 
     private:
