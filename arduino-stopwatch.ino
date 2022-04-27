@@ -257,7 +257,12 @@ void race() {
             break;
         case READY_RACE:
             if (refresh) {
+                currentPart = 0;
+                for (int i=0; i<4; i++) {
+                    currentBoard[i] = 0;
+                }
                 digitalWrite(LASER, HIGH);
+                delay(100);
                 showBoard(currentBoard);
                 refresh = false;
             }
@@ -268,6 +273,10 @@ void race() {
             }
             if (readButton(ENTER_BUTTON)) {
                 mainState = MAIN_MENU;
+                raceState = SELECT_PLAYER;
+                refresh = true;
+            }
+            if (readButton(CHANGE_BUTTON)) {
                 raceState = SELECT_PLAYER;
                 refresh = true;
             }
@@ -292,6 +301,11 @@ void race() {
                 mainState = MAIN_MENU;
                 raceState = SELECT_PLAYER;
                 refresh = true;
+                digitalWrite(LASER, LOW);
+            }
+            if (readButton(CHANGE_BUTTON)) {
+                raceState = READY_RACE;
+                refresh = true;
             }
             break;
         case FINISH_RACE:
@@ -307,18 +321,12 @@ void race() {
             }
             if (readButton(CHANGE_BUTTON)) {
                 raceState = READY_RACE;
-                currentPart = 0;
-                for (int i=0; i<4; i++) {
-                    currentBoard[i] = 0;
-                }
+                refresh = true;
             }
             if (readButton(ENTER_BUTTON)) {
                 mainState = MAIN_MENU;
                 raceState = SELECT_PLAYER;
-                currentPart = 0;
-                for (int i=0; i<4; i++) {
-                    currentBoard[i] = 0;
-                }
+                refresh = true;
             }
             break;
         default:
@@ -375,14 +383,26 @@ void showBoard(uint16_t* board) {
         lcd.print(boardLabels[i]);
         String ss = String(board[i] / 1000);
         String ms = String(board[i] % 1000);
+        uint16_t prevTime;
+        if (i > 0) prevTime = board[i-1];
+        else prevTime = 0;
+        String dss = String((board[i] - prevTime) / 1000);
+        String dms = String((board[i] - prevTime) % 1000);
         while (ss.length() < 2) {
             ss = '0' + ss;
         }
         while (ms.length() < 3) {
             ms = '0' + ms;
         }
+        while (dss.length() < 2) {
+            dss = '0' + dss;
+        }
+        while (dms.length() < 3) {
+            dms = '0' + dms;
+        }
         lcd.setCursor(4, i);
-        lcd.print(ss + ':' + ms);
+        if (i < currentPart) lcd.print(ss + ':' + ms + "   " + dss + ':' + dms);
+        else lcd.print(ss + ':' + ms);
     }
 }
 
@@ -430,7 +450,7 @@ bool readLaser() {
         return true;
     }
 
-    if (time > laserLastActivation + laserInactivityTime - 30) {
+    if (time > laserLastActivation + laserInactivityTime - 100) {
         digitalWrite(LASER, HIGH);
     }
     return false;
@@ -491,6 +511,7 @@ void writePlayerBoard(int player, uint16_t* board) {
             EEPROM.put(offset + 2 * part + 1, secondOctet);
         }
     }
+    loadData();
 }
 
 void loadData() {
@@ -529,10 +550,11 @@ void calibrateLaser() {
     delay(1000);
     digitalWrite(LASER, HIGH);
     delay(100);
-    int lowLight = analogRead(DILDO);
+    int highLight = analogRead(DILDO);
+    delay(100);
     digitalWrite(LASER, LOW);
     delay(100);
-    int highLight = analogRead(DILDO);
+    int lowLight = analogRead(DILDO);
     
     dildoThresh = (highLight + lowLight) / 2;
     refresh = true;
